@@ -23,7 +23,7 @@ CREATE OR REPLACE PACKAGE CUPADM.PKG_CUP_SP_HOMOLOGA_FECHA IS
 END PKG_CUP_SP_HOMOLOGA_FECHA;
 /
 
-CREATE OR REPLACE PACKAGE BODY CUPADM.PKG_CUP_SP_HOMOLOGA_FECHA
+create or replace PACKAGE BODY        PKG_CUP_SP_HOMOLOGA_FECHA
 AS
 -----------------------------------------------------------------------------
 -- Creación: FEBRERO 23
@@ -36,6 +36,7 @@ AS
 --                         enviado por Arturo el día26 de Abr 23 
 -- Modificación: 28 Junio 23, por observación de Arturo en actualizar el campo ESTATUS_FORMATO_SF a 0 que se realiza en la FN_ACTUALIZA_CUP
 -- Modificacion: 12 JULIO 23, se adiciono la funcion de FN_CALCULA_FECHAS, por modularidad
+-- Modificacion: 06 Marzo 24: solo debe tomar el ultimo registro de la tabla emision SF de cada persona
 -----------------------------------------------------------------------------
 
         FUNCTION FN_CALCULA_MESESDIAS(vd_fecha date) RETURN NUMBER
@@ -135,6 +136,10 @@ CURSOR cr_verifica_sf IS
          INNER JOIN evaluacion@DB_ECCC EV ON EV."Id_Evaluacion" = SF.ID_ECCC AND EV."Id_Tipo_Evaluacion" IN (1,2)
          WHERE sf.EMISION_CUP IS NOT NULL 
          AND sf.ESTATUS_CUP in (0,1)
+         AND SF.ID_EMISION_SF IN (SELECT max(ESF.id_emision_sf) 
+                              FROM emision_sf ESF
+                             WHERE ESF.id_persona = sf.id_persona
+                               AND ESF.emision_cup is not null)
          AND SF.ID_EMISION_SF NOT IN (SELECT BHFC.ID_EMISION_SF FROM CUP_BIT_HOMOLOGA_FECHAS BHFC)
          AND PER.CUIP IN (SELECT CUIP FROM CUIP_PBA_240208)
          ORDER BY sf.id_persona, sf.id_emision_sf DESC;
@@ -248,5 +253,7 @@ DBMS_OUTPUT.PUT_LINE('calculo...' || TO_CHAR(REGCR_VERIFICA_SF.ID_EMISION_SF)||'
             DBMS_OUTPUT.PUT_LINE('Problema en el Procedimiento CUP_SP_HOMOLOGA_FECHA...' || TO_CHAR(REGCR_VERIFICA_SF.ID_EMISION_SF));
 
 END CUP_SP_HOMOLOGA_FECHA;
+
+END PKG_CUP_SP_HOMOLOGA_FECHA;
 
 END PKG_CUP_SP_HOMOLOGA_FECHA;
