@@ -26,7 +26,7 @@ CREATE OR REPLACE PACKAGE CUPADM.PKG_CUP_SP_CALCULO_CUP is
  
 END PKG_CUP_SP_CALCULO_CUP;
 
-CREATE OR REPLACE PACKAGE BODY CUPADM.PKG_CUP_SP_CALCULO_CUP
+create or replace PACKAGE BODY PKG_CUP_SP_CALCULO_CUP
 AS
 
     FUNCTION FN_ACTUALIZA_ESTATUS_CUP(VPIDEMISION NUMBER) RETURN NUMBER
@@ -39,7 +39,7 @@ AS
      Ver Date Author Description
      --------- ---------- --------------- ------------------------------------
      1.0 26/12/2023 JLCR 1. Creación de la funcion
-     
+
     ******************************************************************************/
     BEGIN
 
@@ -66,7 +66,7 @@ AS
      Ver Date Author Description
      --------- ---------- --------------- ------------------------------------
      1.0 26/12/2023 JLCR 1. Creación de la funcion
-     
+
     ******************************************************************************/
     BEGIN
         UPDATE EMISION_SF
@@ -92,7 +92,7 @@ AS
      Ver Date Author Description
      --------- ---------- --------------- ------------------------------------
      1.0 26/12/2023 JLCR 1. Creación de la funcion
-     
+
     ******************************************************************************/
     BEGIN
         UPDATE EMISION_SF
@@ -108,7 +108,7 @@ AS
             RETURN 0;
 
     END FN_ACTUALIZA_EMISIONSF;
-    
+
     FUNCTION FN_ACTUALIZA_CUP_FUE(VPIDEMISION INT) RETURN NUMBER
     IS
     /******************************************************************************
@@ -119,7 +119,7 @@ AS
      Ver Date Author Description
      --------- ---------- --------------- ------------------------------------
      1.0 26/12/2023 JLCR 1. Creación de la funcion
-     
+
     ******************************************************************************/
     BEGIN
         UPDATE EMISION_SF
@@ -136,32 +136,40 @@ AS
 
     END FN_ACTUALIZA_CUP_FUE;
 
-    FUNCTION FN_CALCULA_FECHAS(VANIOS INT, VMESES INT, VDIAS INT) RETURN NUMBER
+    FUNCTION FN_CALCULA_MESESDIAS(vd_fecha date) RETURN NUMBER
         IS
         /******************************************************************************
-     NAME: FN_CALCULA_FECHAS
-     PURPOSE: funcion el calculo de fechas a meses y dias.
+     NAME: FN_CALCULA_MESESDIAS
+     PURPOSE: funcion el calculo cuentos meses dias han pasado de fechas al dia hoy.
 
      REVISIONS:
      Ver Date Author Description
      --------- ---------- --------------- ------------------------------------
-     1.0 26/12/2023 JLCR 1. Creación de la funcion
-     
-    ******************************************************************************/
-        BEGIN
+     1.0 06/01/2024 JLCR 1. Creación de la funcion
 
-            RETURN (VANIOS * 12) + VMESES + (VDIAS / 100);
+    ******************************************************************************/
+
+    VANIOS NUMBER(5,3) := 0;
+    VMESES NUMBER(5,3) := 0;
+    VDIAS  NUMBER(5,3) := 0;
+
+    BEGIN
+        --DBMS_OUTPUT.PUT_LINE('FECHA CALCULO...' ||' ' || TO_CHAR(vd_fecha));
+               VANIOS := TRUNC ( MONTHS_BETWEEN ( SYSDATE, TRUNC( vd_fecha )) / 12 );
+               VMESES := TRUNC(MOD ( FLOOR ( MONTHS_BETWEEN ( SYSDATE, TRUNC ( vd_fecha) ) ), 12 ));
+               VDIAS := TRUNC(SYSDATE - add_months(vd_fecha, trunc(months_between(SYSDATE, TRUNC ( vd_fecha )))));
+               RETURN (VANIOS * 12) + VMESES + (VDIAS / 100);
 
         EXCEPTION 
             WHEN OTHERS   THEN 
                 RETURN 0;
-    END FN_CALCULA_FECHAS;
+    END FN_CALCULA_MESESDIAS;
 
     PROCEDURE CUP_SP_CALCULO_CUP
     IS
-        
+
     CURSOR cr_verifica_sf IS
-    SELECT ID_EMISION_SF
+        SELECT ID_EMISION_SF
           , SF.ID_FORMACION
           , ED.ID_EVALUACION_DESEMPENIO
           , SF.ID_COMPETENCIA_BASICA
@@ -173,53 +181,39 @@ AS
           , SF.FECHA_EMISION_SF
           , SF.ID_ECCC
           , EV."Fecha_Evaluacion" FECHA_EVALUACION_ECCC
-          , TRUNC ( MONTHS_BETWEEN ( SYSDATE, TRUNC( EV."Fecha_Evaluacion" )) / 12 ) ANIOS_EMISION_ECCC
-          , TRUNC(MOD ( FLOOR ( MONTHS_BETWEEN ( SYSDATE, TRUNC ( EV."Fecha_Evaluacion" ) ) ), 12 )) MESES_EMISION_ECCC
-          , TRUNC(SYSDATE - add_months(EV."Fecha_Evaluacion", trunc(months_between(SYSDATE, TRUNC ( EV."Fecha_Evaluacion" ))))) DIAS_EMISION_ECCC
           , EV."Fecha_Evaluacion" + 1095 FECHA_VENCIMIENTO_ECCC --1095 DIAS = 3 AÑOS
           , EV."Id_Tipo_Evaluacion" ID_TIPO_EVALUACION
           , EV."borrado" BORRADO
           , EV."Id_Resultado_Integral" ID_RESULTADO_INTEGRAL
           , FI.FECHA_CONCLUSION FECHA_CONCLUSION_FI
           , FI.ESTATUS_CURSO ESTATUS_CURSO_FI
-          , CB.FECHA_EVALUACION
-          , TRUNC ( MONTHS_BETWEEN ( SYSDATE, TRUNC( CB.FECHA_EVALUACION )) / 12 ) ANIOS_EVALUACION_CB
-          , TRUNC(MOD ( FLOOR ( MONTHS_BETWEEN ( SYSDATE, TRUNC ( CB.FECHA_EVALUACION ) ) ), 12 )) MESES_EVALUACION_CB
-          , TRUNC(SYSDATE - add_months(CB.FECHA_EVALUACION, trunc(months_between(SYSDATE, TRUNC (CB.FECHA_EVALUACION ))))) DIAS_EVALUACION_CB
+          , CB.FECHA_EVALUACION FECHA_EVALUACION_CB
           , CB.ESTATUS_REGISTRO ESTATUS_COMPETENCIA
           , ED.FECHA_EVALUACION FECHA_EVALUACION_DESEMPENIO
-          , TRUNC ( MONTHS_BETWEEN ( SYSDATE, TRUNC( ED.FECHA_EVALUACION )) / 12 ) ANIOS_DESEMPENIO
-          , TRUNC(MOD ( FLOOR ( MONTHS_BETWEEN ( SYSDATE, TRUNC ( ED.FECHA_EVALUACION ) ) ), 12 )) MESES_DESEMPENIO
-          , TRUNC(SYSDATE - add_months(ED.FECHA_EVALUACION, trunc(months_between(SYSDATE, TRUNC (ED.FECHA_EVALUACION ))))) DIAS_DESEMPENIO
           , SF.FECHA_EMISION_CUP
-          , TRUNC ( MONTHS_BETWEEN ( SYSDATE, TRUNC( sf.fecha_emision_cup )) / 12 ) ANIOS_CUP
-          , TRUNC(MOD ( FLOOR ( MONTHS_BETWEEN ( SYSDATE, TRUNC ( sf.fecha_emision_cup ) ) ), 12 )) MESES_CUP
-          , TRUNC(SYSDATE - add_months(sf.fecha_emision_cup, trunc(months_between(SYSDATE, TRUNC ( sf.fecha_emision_cup ))))) DIAS_CUP          
           , ED.ESTATUS_EVALUACION ESTATUS_DESEMPENIO
-          , TRUNC ( MONTHS_BETWEEN ( SYSDATE, TRUNC( sf.fecha_emision_sf )) / 12 ) ANIOS_EMISION
-          , TRUNC(MOD ( FLOOR ( MONTHS_BETWEEN ( SYSDATE, TRUNC ( sf.FECHA_EMISION_SF ) ) ), 12 )) MESES_EMISION
-          , TRUNC(SYSDATE - add_months(sf.FECHA_EMISION_SF, trunc(months_between(SYSDATE, TRUNC ( sf.FECHA_EMISION_SF ))))) DIAS_EMISION
-          , TRUNC ( MONTHS_BETWEEN ( SYSDATE, TRUNC( FI.FECHA_CONCLUSION )) / 12 ) ANIOS_CONCLUSION_FI
-          , TRUNC(MOD ( FLOOR ( MONTHS_BETWEEN ( SYSDATE, TRUNC ( FI.FECHA_CONCLUSION ) ) ), 12 )) MESES_CONCLUSION_FI
-          , TRUNC(SYSDATE - add_months(FI.FECHA_CONCLUSION, trunc(months_between(SYSDATE, TRUNC ( FI.FECHA_CONCLUSION ))))) DIAS_CONCLUSION_FI
-          , (SELECT count(1) FROM cup_bit_calculo_cup BCC WHERE bcc.id_emision_sf = sf.id_emision_sf) CUMPLE
+          , (SELECT count(1) FROM cup_bit_homologa_fechas BCC WHERE bcc.id_emision_sf = sf.id_emision_sf) CUMPLE
           , SYSDATE FECHA_COMPARA
          FROM emision_sf sf
          INNER JOIN prsnapp.persona per on per.ID_PERSONA = SF.ID_PERSONA
          LEFT JOIN formacion_inicial fi on FI.ID_FORMACION = SF.id_formacion
          LEFT JOIN competencia_basica CB on CB.ID_COMPETENCIA_BASICA = SF.ID_COMPETENCIA_BASICA
          LEFT JOIN evaluacion_desempenio ED on ED.ID_EVALUACION_DESEMPENIO = sf.ID_EVALUACION_DESEMPENIO
-         LEFT JOIN evaluacion@SQLDESA EV ON EV."Id_Evaluacion" = SF.ID_ECCC AND EV."Id_Tipo_Evaluacion" IN (1,2)
+         INNER JOIN evaluacion@SQLDESA EV ON EV."Id_Evaluacion" = SF.ID_ECCC AND EV."Id_Tipo_Evaluacion" IN (1,2)
          WHERE sf.EMISION_CUP IS NOT NULL AND sf.ESTATUS_CUP in (0,1)
+         AND SF.ID_EMISION_SF IN (SELECT max(ESF.id_emision_sf) 
+                              FROM emision_sf ESF
+                             WHERE ESF.id_persona = sf.id_persona
+                               AND ESF.emision_cup is not null)
          AND PER.CUIP IN (SELECT CUIP FROM CUIP_PBA_240208)--SOLO PARA PRUEBAS
          ORDER BY sf.id_persona, sf.id_emision_sf DESC;
 
         REGCR_VERIFICA_SF CR_VERIFICA_SF%ROWTYPE;
 
         VNBANDERA NUMBER(1) := 0;
-        
+
         VNTIEMPO NUMBER(4,2) := 0.0;
-        
+
 BEGIN
     OPEN CR_VERIFICA_SF;
 
@@ -228,91 +222,93 @@ BEGIN
 FETCH CR_VERIFICA_SF INTO REGCR_VERIFICA_SF;
 
         EXIT WHEN CR_VERIFICA_SF%NOTFOUND; -- Último registro;
-   
-    --- Tiempo a calcular 3 años o 5 años
+
+        --- Tiempo a calcular 3 años o 5 años
         IF REGCR_VERIFICA_SF.CUMPLE = 0 THEN 
             VNTIEMPO := 36.0;
         ELSE
             VNTIEMPO := 60.0;
         END IF;
-DBMS_OUTPUT.PUT_LINE('VNTIEMPO...' || TO_CHAR(VNTIEMPO));
-                --verifica ECCC
-                IF TRUNC(REGCR_VERIFICA_SF.fecha_vencimiento_ECCC) BETWEEN TO_DATE('18/05/2019','DD/MM/YYYY') AND TO_DATE('17/05/2020','DD/MM/YYYY') THEN 
-                    IF FN_CALCULA_FECHAS(REGCR_VERIFICA_SF.ANIOS_EMISION_ECCC, REGCR_VERIFICA_SF.MESES_EMISION_ECCC, REGCR_VERIFICA_SF.DIAS_EMISION_ECCC) > 48.0
-                        AND REGCR_VERIFICA_SF.ID_RESULTADO_INTEGRAL = 1 THEN
-
-                        IF REGCR_VERIFICA_SF.ESTATUS_FORMATO_SF = 1 AND REGCR_VERIFICA_SF.ESTATUS_CUP = 0 THEN 
-
-                            VNBANDERA := FN_ACTUALIZA_SF(REGCR_VERIFICA_SF.ID_EMISION_SF);
-
-                        ELSIF REGCR_VERIFICA_SF.ESTATUS_FORMATO_SF = 0 AND REGCR_VERIFICA_SF.ESTATUS_CUP = 1 THEN
-
-                            VNBANDERA := FN_ACTUALIZA_ESTATUS_CUP(REGCR_VERIFICA_SF.ID_EMISION_SF);
-
-                        END IF;
-
-                    END IF;
-                ELSIF FN_CALCULA_FECHAS(REGCR_VERIFICA_SF.ANIOS_EMISION_ECCC, REGCR_VERIFICA_SF.MESES_EMISION_ECCC, REGCR_VERIFICA_SF.DIAS_EMISION_ECCC) > 36.0 
-                        AND REGCR_VERIFICA_SF.ID_RESULTADO_INTEGRAL = 1 THEN 
-
+            --DBMS_OUTPUT.PUT_LINE('VNTIEMPO...' || TO_CHAR(VNTIEMPO));
+            --verifica ECCC
+            IF FN_CALCULA_MESESDIAS(REGCR_VERIFICA_SF.FECHA_EVALUACION_ECCC) >= 36.0 
+                    THEN 
                         IF REGCR_VERIFICA_SF.ESTATUS_FORMATO_SF = 1 AND REGCR_VERIFICA_SF.ESTATUS_CUP = 0 THEN 
 
                            VNBANDERA := FN_ACTUALIZA_SF(REGCR_VERIFICA_SF.ID_EMISION_SF);
 
-                        ELSIF REGCR_VERIFICA_SF.ESTATUS_FORMATO_SF = 0 AND REGCR_VERIFICA_SF.ESTATUS_CUP = 1 THEN
+                           GOTO BITACORA;
 
+                        ELSIF REGCR_VERIFICA_SF.ESTATUS_FORMATO_SF = 0 AND REGCR_VERIFICA_SF.ESTATUS_CUP = 1 THEN
                             VNBANDERA := FN_ACTUALIZA_ESTATUS_CUP(REGCR_VERIFICA_SF.ID_EMISION_SF);
+
+                            GOTO BITACORA;
+
+                        ELSE
+
+                            GOTO BITACORA;
 
                         END IF;
 
                 END IF; --verifica ECCC
 
+          --  DBMS_OUTPUT.PUT_LINE('TERMINA ECCC...');
                 --Verifica Competencias Basicas
-                IF REGCR_VERIFICA_SF.ID_COMPETENCIA_BASICA != 0 THEN --Modicación (2)
-                    IF  FN_CALCULA_FECHAS(REGCR_VERIFICA_SF.anios_evaluacion_cb, REGCR_VERIFICA_SF.meses_evaluacion_cb, REGCR_VERIFICA_SF.dias_evaluacion_cb) > VNTIEMPO --36.0 
+                IF REGCR_VERIFICA_SF.ID_COMPETENCIA_BASICA != 0 THEN 
+                    IF  FN_CALCULA_MESESDIAS(REGCR_VERIFICA_SF.FECHA_EVALUACION_CB) > VNTIEMPO --36.0
                         AND VNBANDERA = 0 THEN
                         BEGIN 
 
-                            VNBANDERA := FN_ACTUALIZA_EMISIONSF(REGCR_VERIFICA_SF.ID_EMISION_SF);
+                            IF REGCR_VERIFICA_SF.ESTATUS_CUP = 1 THEN
+                                VNBANDERA := FN_ACTUALIZA_EMISIONSF(REGCR_VERIFICA_SF.ID_EMISION_SF);
+                                GOTO BITACORA;
 
-                            --DBMS_OUTPUT.PUT_LINE('ACTUALIZA CB EMISION_SF...' || TO_CHAR(REGCR_VERIFICA_SF.ID_EMISION_SF));
+                            ELSE
+                                GOTO BITACORA;
+                            END IF;
 
                         END;
                     END IF;
                 ELSE
-                    IF  FN_CALCULA_FECHAS(REGCR_VERIFICA_SF.ANIOS_CONCLUSION_FI, REGCR_VERIFICA_SF.MESES_CONCLUSION_FI, REGCR_VERIFICA_SF.DIAS_CONCLUSION_FI) > 36.0  
+                    IF  FN_CALCULA_MESESDIAS(REGCR_VERIFICA_SF.FECHA_CONCLUSION_FI) > 36.0
                         AND VNBANDERA = 0 THEN
                         BEGIN 
 
-                            VNBANDERA := FN_ACTUALIZA_EMISIONSF(REGCR_VERIFICA_SF.ID_EMISION_SF);
+                            IF REGCR_VERIFICA_SF.ESTATUS_CUP = 1 THEN
+                                VNBANDERA := FN_ACTUALIZA_EMISIONSF(REGCR_VERIFICA_SF.ID_EMISION_SF);
+                                GOTO BITACORA;
 
-                            --DBMS_OUTPUT.PUT_LINE('ACTUALIZA CB EMISION_SF...' || TO_CHAR(REGCR_VERIFICA_SF.ID_EMISION_SF));
+                            ELSE
+                                GOTO BITACORA;
+                            END IF;
 
                         END;
                     END IF;
                 END IF;
 
                 --Verifica Evaluacion Desempeño
-                IF FN_CALCULA_FECHAS(REGCR_VERIFICA_SF.anios_desempenio, REGCR_VERIFICA_SF.meses_desempenio, REGCR_VERIFICA_SF.dias_desempenio) > VNTIEMPO --36.0 
+                IF FN_CALCULA_MESESDIAS(REGCR_VERIFICA_SF.FECHA_EVALUACION_DESEMPENIO) > VNTIEMPO --36.0
                     AND VNBANDERA = 0 THEN
                     BEGIN 
+                            IF REGCR_VERIFICA_SF.ESTATUS_CUP = 1 THEN
+                                VNBANDERA := FN_ACTUALIZA_EMISIONSF(REGCR_VERIFICA_SF.ID_EMISION_SF);
+                                GOTO BITACORA;
 
-                        VNBANDERA := FN_ACTUALIZA_EMISIONSF(REGCR_VERIFICA_SF.ID_EMISION_SF);
-
-                        --DBMS_OUTPUT.PUT_LINE('ACTUALIZA ED EMISION_SF...' || TO_CHAR(REGCR_VERIFICA_SF.ID_EMISION_SF));
+                            ELSE
+                                GOTO BITACORA;
+                            END IF;
 
                     END;
-                ELSIF  REGCR_VERIFICA_SF.ESTATUS_CUP = 1 AND REGCR_VERIFICA_SF.CUMPLE = 0 AND VNBANDERA = 0 THEN
-                     
+                ELSIF  REGCR_VERIFICA_SF.ESTATUS_CUP = 0 AND VNBANDERA = 0 THEN
+
                         VNBANDERA := FN_ACTUALIZA_CUP_FUE(REGCR_VERIFICA_SF.ID_EMISION_SF);
                 END IF;
 
-
- --           END IF; --cup vigente
-
     --GENERA BITACORA DE MOVIMIENTOS
+
+    <<BITACORA>>
     IF VNBANDERA = 1 THEN
-        DBMS_OUTPUT.PUT_LINE('GRABA BITACORA...' || TO_CHAR(REGCR_VERIFICA_SF.ID_EMISION_SF));
+        --DBMS_OUTPUT.PUT_LINE('GRABA BITACORA...' || TO_CHAR(REGCR_VERIFICA_SF.ID_EMISION_SF)|| ' '|| TO_CHAR(VNBANDERA));
 
        INSERT INTO CUP_BIT_CALCULO_CUP ( ID_EMISION_SF
         , ID_FORMACION
@@ -344,6 +340,8 @@ DBMS_OUTPUT.PUT_LINE('VNTIEMPO...' || TO_CHAR(VNTIEMPO));
         VNBANDERA := 0;
     END IF;
 
+    VNTIEMPO := 00.0;
+
     COMMIT;
 
     END LOOP;
@@ -355,5 +353,7 @@ DBMS_OUTPUT.PUT_LINE('VNTIEMPO...' || TO_CHAR(VNTIEMPO));
             DBMS_OUTPUT.PUT_LINE('Problema en el Procedimiento CUP_SP_CALCULO_CUP...CUIP: ' || REGCR_VERIFICA_SF.CUIP);
 
 END CUP_SP_CALCULO_CUP;
+
+END PKG_CUP_SP_CALCULO_CUP;
 
 END PKG_CUP_SP_CALCULO_CUP;
